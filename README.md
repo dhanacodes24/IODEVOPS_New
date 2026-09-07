@@ -1,12 +1,49 @@
 
+```
+ansible-common/
+├── inventories/
+│   └── gen3/
+│       ├── autosys_requirements.yml        ← Galaxy requirements (role pointer)
+│       └── inventory/
+│           └── static/
+│               ├── autosys-prod-uat.yml    ← Host groups + limits
+│               └── group_vars/
+│                   └── autosys_project/
+│                       ├── autosys_users.yml   ← UID / GID / OS user
+│                       └── autosys_common.yml  ← Shared config
+│
+├── playbooks/
+│   └── gen3/
+│       └── autosys-prod-uat.yml            ← Top-level playbook
+│
+└── ansible-roles/
+    └── core-autosys-uat-role/               ← Ansible role
+        ├── tasks/
+        │   ├── main.yml                    ← Tag router
+        │   ├── autosys_start.yml
+        │   ├── autosys_stop.yml
+        │   ├── autosys_status.yml
+        │   └── autosys_restart.yml
+        ├── defaults/
+        │   └── main.yml                    ← Default variable values
+        ├── vars/
+        │   └── main.yml                    ← (reserved for env overrides)
+        ├── handlers/
+        │   └── main.yml                    ← (reserved)
+        ├── templates/                      ← (reserved for Jinja2 templates)
+        └── meta/
+            └── main.yml                    ← Role metadata
 
 
 
 
 
+```
 
 
 ----------------------------------------
+
+
 ```
 pipeline {
     agent { label 'py38-ansible-2-9' }
