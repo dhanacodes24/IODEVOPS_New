@@ -1,41 +1,43 @@
 
 ```
-ansible-common/
-├── inventories/
-│   └── gen3/
-│       ├── autosys_requirements.yml        ← Galaxy requirements (role pointer)
-│       └── inventory/
-│           └── static/
-│               ├── autosys-prod-uat.yml    ← Host groups + limits
-│               └── group_vars/
-│                   └── autosys_project/
-│                       ├── autosys_users.yml   ← UID / GID / OS user
-│                       └── autosys_common.yml  ← Shared config
+
+
+/IODEVOPS/
+├── ta-autosys-ansible-roles/              ← Ansible Galaxy Role (Bitbucket Repo)
+│   ├── Jenkinsfile                        ← Jenkins Pipeline definition
+│   ├── meta/
+│   │   └── main.yml                       ← Role metadata
+│   ├── defaults/
+│   │   └── main.yml                       ← Default variable values
+│   ├── vars/
+│   │   └── main.yml                       ← Role-level variables
+│   ├── handlers/
+│   │   └── main.yml                       ← Handlers (none needed)
+│   └── tasks/
+│       ├── main.yml                       ← Entry point, delegates via tags
+│       ├── start.yml                      ← Start Autosys tasks
+│       ├── stop.yml                       ← Stop Autosys tasks
+│       └── status.yml                     ← Status check tasks
 │
-├── playbooks/
-│   └── gen3/
-│       └── autosys-prod-uat.yml            ← Top-level playbook
-│
-└── ansible-roles/
-    └── core-autosys-uat-role/               ← Ansible role
-        ├── tasks/
-        │   ├── main.yml                    ← Tag router
-        │   ├── autosys_start.yml
-        │   ├── autosys_stop.yml
-        │   ├── autosys_status.yml
-        │   └── autosys_restart.yml
-        ├── defaults/
-        │   └── main.yml                    ← Default variable values
-        ├── vars/
-        │   └── main.yml                    ← (reserved for env overrides)
-        ├── handlers/
-        │   └── main.yml                    ← (reserved)
-        ├── templates/                      ← (reserved for Jinja2 templates)
-        └── meta/
-            └── main.yml                    ← Role metadata
-
-
-
+└── ansible-common/
+    ├── playbooks/
+    │   └── gen3/
+    │       └── autosys.yml                ← Playbook (mirrors webinterface.yml pattern)
+    └── inventories/
+        ├── gen3-voor-prod/
+        │   ├── autosys_prod_requirements.yml   ← Role source (git+https)
+        │   └── inventory/static/
+        │       ├── autosys.yml                 ← Host groups (primary/shadow)
+        │       └── group_vars/
+        │           └── autosys_vars/
+        │               └── prod_autosys.yml    ← Server vars (user, gid, uid, cmd)
+        └── gen3-voor-uat/
+            ├── autosys_uat_requirements.yml    ← Role source (git+https)
+            └── inventory/static/
+                ├── autosys.yml                 ← Host groups (primary/shadow)
+                └── group_vars/
+                    └── autosys_vars/
+                        └── uat_autosys.yml     ← Server vars (user, gid, uid, cmd)
 
 
 ```
