@@ -1,0 +1,214 @@
+// ============================================================
+// Jenkins Pipeline: Autosys Service Management
+// Supports: UAT and PROD | Actions: start / stop / restart / status
+// Location: /IODEVOPS/ta-autosys-ansible-roles/Jenkinsfile
+// ============================================================
+
+pipeline {
+    agent { label 'py38-ansible-2-9' }
+
+    parameters {
+        choice(
+            name: 'environment',
+            choices: ['UAT', 'PROD'],
+            description: 'Target environment - UAT or PROD'
+        )
+        choice(
+            name: 'type_of_action',
+            choices: ['status', 'start', 'stop', 'restart'],
+            description: 'Action to perform on Autosys scheduler'
+        )
+        string(
+            name: 'target_hosts',
+            defaultValue: '',
+            description: '(Optional) Specific host to target. Leave blank to use limit group.'
+        )
+        choice(
+            name: 'ansible_verbosity',
+            choices: ['-v', '-vv', '-vvv', ''],
+            description: 'Ansible verbosity level (blank = none)'
+        )
+    }
+
+    environment {
+        ANSIBLE_LOCAL_TEMP           = "${WORKSPACE}/.ansible/tmp"
+        ANSIBLE_DISPLAY_SKIPPED_HOSTS = "${params.ansible_verbosity == '' ? 'false' : 'true'}"
+        ANSIBLE_CONFIG               = "${WORKSPACE}/playbooks/gen3/ansible.cfg"
+        ANSIBLE_ROLES_PATH           = "${WORKSPACE}/.ansible/roles"
+
+        // Derived from environment param
+        INVENTORY_DIR = "${params.environment == 'PROD' ? 'inventories/gen3-voor-prod' : 'inventories/gen3-voor-uat'}"
+        REQUIREMENTS_FILE = "${params.environment == 'PROD' ? 'inventories/gen3-voor-prod/autosys_prod_requirements.yml' : 'inventories/gen3-voor-uat/autosys_uat_requirements.yml'}"
+        ENV_PREFIX = "${params.environment == 'PROD' ? 'prod' : 'uat'}"
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '20', daysToKeepStr: '60'))
+    }
+
+    stages {
+
+        stage('SCM Checkout') {
+            steps {
+                git(
+                    url: 'https://bitbucket.test.dev/scm/iodevops/ansible-common.git',
+                    branch: 'main',
+                    credentialsId: 'test-com-svcacct-gtasrepo'
+                )
+            }
+        }
+
+        stage('Import Ansible Roles') {
+            steps {
+                withCredentials([gitUsernamePassword(credentialsId: 'test-com-svcacct-gtasrepo')]) {
+                    sh label: 'Import Ansible Roles', script: """
+                        export https_proxy=\$prod_https_proxy
+                        export http_proxy=\$prod_https_proxy
+                        ansible-galaxy role install -c ${ansible_verbosity} -r ${REQUIREMENTS_FILE}
+                        ansible-galaxy role list ${ansible_verbosity}
+                    """
+                }
+            }
+        }
+
+        // ── STOP sequence: Shadow FIRST, then Primary ─────────────────────────────
+        stage('Autosys STOP - Shadow Scheduler') {
+            when {
+                anyOf {
+                    expression { return params.type_of_action == 'stop' }
+                    expression { return params.type_of_action == 'restart' }
+                }
+            }
+            steps {
+                script {
+                    sshagent(['boks-gtaansible-ssh']) {
+                        sh label: 'Stop Shadow Scheduler', script: """
+                            ansible-playbook playbooks/gen3/autosys.yml \\
+                                -i ${INVENTORY_DIR}/inventory/static \\
+                                --limit ${ENV_PREFIX}_P01_autosys_shadow \\
+                                ${ansible_verbosity} \\
+                                --tags stop \\
+                                --extra-vars "target_hosts=${params.target_hosts}"
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Autosys STOP - Primary Scheduler') {
+            when {
+                anyOf {
+                    expression { return params.type_of_action == 'stop' }
+                    expression { return params.type_of_action == 'restart' }
+                }
+            }
+            steps {
+                script {
+                    sshagent(['boks-gtaansible-ssh']) {
+                        sh label: 'Stop Primary Scheduler', script: """
+                            ansible-playbook playbooks/gen3/autosys.yml \\
+                                -i ${INVENTORY_DIR}/inventory/static \\
+                                --limit ${ENV_PREFIX}_P01_autosys_primary \\
+                                ${ansible_verbosity} \\
+                                --tags stop \\
+                                --extra-vars "target_hosts=${params.target_hosts}"
+                        """
+                    }
+                }
+            }
+        }
+
+        // ── START sequence: Primary FIRST, then Shadow ────────────────────────────
+        stage('Autosys START - Primary Scheduler') {
+            when {
+                anyOf {
+                    expression { return params.type_of_action == 'start' }
+                    expression { return params.type_of_action == 'restart' }
+                }
+            }
+            steps {
+                script {
+                    sshagent(['boks-gtaansible-ssh']) {
+                        sh label: 'Start Primary Scheduler', script: """
+                            ansible-playbook playbooks/gen3/autosys.yml \\
+                                -i ${INVENTORY_DIR}/inventory/static \\
+                                --limit ${ENV_PREFIX}_P01_autosys_primary \\
+                                ${ansible_verbosity} \\
+                                --tags start \\
+                                --extra-vars "target_hosts=${params.target_hosts}"
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Autosys START - Shadow Scheduler') {
+            when {
+                anyOf {
+                    expression { return params.type_of_action == 'start' }
+                    expression { return params.type_of_action == 'restart' }
+                }
+            }
+            steps {
+                script {
+                    sshagent(['boks-gtaansible-ssh']) {
+                        sh label: 'Start Shadow Scheduler', script: """
+                            ansible-playbook playbooks/gen3/autosys.yml \\
+                                -i ${INVENTORY_DIR}/inventory/static \\
+                                --limit ${ENV_PREFIX}_P01_autosys_shadow \\
+                                ${ansible_verbosity} \\
+                                --tags start \\
+                                --extra-vars "target_hosts=${params.target_hosts}"
+                        """
+                    }
+                }
+            }
+        }
+
+        // ── STATUS: Both servers ───────────────────────────────────────────────────
+        stage('Autosys STATUS - All Schedulers') {
+            when {
+                expression { return params.type_of_action == 'status' }
+            }
+            steps {
+                script {
+                    sshagent(['boks-gtaansible-ssh']) {
+                        sh label: 'Status Check All', script: """
+                            ansible-playbook playbooks/gen3/autosys.yml \\
+                                -i ${INVENTORY_DIR}/inventory/static \\
+                                --limit ${ENV_PREFIX}_autosys \\
+                                ${ansible_verbosity} \\
+                                --tags status \\
+                                --extra-vars "target_hosts=${params.target_hosts}"
+                        """
+                    }
+                }
+            }
+        }
+
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: '*.log', allowEmptyArchive: true
+        }
+        success {
+            emailext(
+                to: 'my_user@text.com, my_user2@text.com',
+                subject: "SUCCESS: ${currentBuild.fullDisplayName} - ${params.environment}-AUTOSYS-${params.type_of_action.toUpperCase()}",
+                body: "Autosys ${params.type_of_action} completed successfully on ${params.environment}. Please find the console output attached.",
+                attachLog: true
+            )
+            cleanWs()
+        }
+        failure {
+            emailext(
+                to: 'my_user@text.com, my_user2@text.com',
+                subject: "FAILURE: ${currentBuild.fullDisplayName} - ${params.environment}-AUTOSYS-${params.type_of_action.toUpperCase()}",
+                body: "Autosys ${params.type_of_action} FAILED on ${params.environment}. Please find the console output attached.",
+                attachLog: true
+            )
+            cleanWs()
+        }
+    }
+}

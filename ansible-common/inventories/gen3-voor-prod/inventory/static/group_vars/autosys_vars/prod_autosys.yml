@@ -1,0 +1,19 @@
+---
+# ============================================================
+# Autosys PROD group_vars
+# Location: /IODEVOPS/ansible-common/inventories/gen3-voor-prod/inventory/static/group_vars/autosys_vars/prod_autosys.yml
+# Values here are resolved via Jinja2 in task files (no hardcoding in role).
+# ============================================================
+
+# User/Group for become (su - autosys)
+autosys_process_user: autosys
+autosys_group_name: autosys
+autosys_process_uid: 2026
+autosys_process_gid: 2005
+
+# Autosys binary
+autosys_command: unisrventr
+
+# Proxy settings (inherited from common vars if needed)
+https_proxy_hosts: "{{ https_proxy | default('') }}"
+https_proxy_bypass_list: "{{ no_proxy | default('') }}"

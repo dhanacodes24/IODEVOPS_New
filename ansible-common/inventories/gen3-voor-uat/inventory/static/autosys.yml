@@ -1,0 +1,22 @@
+# ============================================================
+# Autosys UAT Inventory - Static Host Groups
+# Location: /IODEVOPS/ansible-common/inventories/gen3-voor-uat/inventory/static/autosys.yml
+# ============================================================
+
+autosys:
+  children:
+    uat_autosys:
+      children:
+        # Primary Scheduler UAT
+        uat_P01_autosys_primary:
+          hosts:
+            VOAUTOUAT1:
+              ansible_host: 100.92.13
+              autosys_scheduler_role: primary
+
+        # Shadow Scheduler UAT
+        uat_P01_autosys_shadow:
+          hosts:
+            VOAUTOUAT2:
+              ansible_host: 100.92.14
+              autosys_scheduler_role: shadow

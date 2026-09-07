@@ -1,0 +1,44 @@
+---
+# ============================================================
+# Autosys | START task file
+# Starts the Autosys scheduler on the target host.
+# Sequence (Primary -> Shadow) is controlled by playbook serial + inventory groups.
+# ============================================================
+
+- name: Autosys | Start | Execute 'unisrventr start all' as autosys user
+  ansible.builtin.command:
+    cmd: "{{ autosys_command }} start all"
+  become: true
+  become_user: "{{ autosys_process_user }}"
+  become_method: su
+  register: autosys_start_result
+  changed_when: autosys_start_result.rc == 0
+  tags:
+    - start
+    - restart
+
+- name: Autosys | Start | Display start command output
+  ansible.builtin.debug:
+    var: autosys_start_result.stdout_lines
+  tags:
+    - start
+    - restart
+
+- name: Autosys | Start | Verify started via status check
+  ansible.builtin.command:
+    cmd: "{{ autosys_command }} status all"
+  become: true
+  become_user: "{{ autosys_process_user }}"
+  become_method: su
+  register: autosys_post_start_status
+  changed_when: false
+  tags:
+    - start
+    - restart
+
+- name: Autosys | Start | Print post-start status output
+  ansible.builtin.debug:
+    var: autosys_post_start_status.stdout_lines
+  tags:
+    - start
+    - restart

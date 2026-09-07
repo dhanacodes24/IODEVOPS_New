@@ -1,0 +1,201 @@
+pipeline {
+    agent { label 'py38-ansible-2-9' }
+
+    environment {
+        ANSIBLE_LOCAL_TEMP            = "${WORKSPACE}/.ansible/tmp"
+        ANSIBLE_DISPLAY_SKIPPED_HOSTS = "${params.ansible_verbosity == '' ? 'false' : 'true'}"
+        ANSIBLE_CONFIG                = "${WORKSPACE}/playbooks/gen3/ansible.cfg"
+        ANSIBLE_ROLES_PATH            = "${WORKSPACE}/.ansible/roles"
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '20', daysToKeepStr: '60'))
+    }
+
+    parameters {
+        choice(
+            name: 'environment',
+            choices: ['UAT', 'PROD'],
+            description: 'Select target environment'
+        )
+        choice(
+            name: 'type_of_action',
+            choices: ['status', 'start', 'stop', 'restart'],
+            description: 'Action to perform on Autosys scheduler'
+        )
+        string(
+            name: 'target_hosts',
+            defaultValue: '',
+            description: 'Optional: specific hostname to target. Leave blank to use limit group.'
+        )
+        choice(
+            name: 'ansible_verbosity',
+            choices: ['-v', '-vv', '-vvv', ''],
+            description: 'Ansible verbosity level'
+        )
+    }
+
+    stages {
+
+        stage('SCM Checkout') {
+            steps {
+                git(
+                    url: 'https://bitbucket.test.dev/scm/iodevops/ansible-common.git',
+                    branch: 'feature/autosys_automation/IODEVOPS-XXX',
+                    credentialsId: 'test-com-svcacct-gtasrepo'
+                )
+            }
+        }
+
+        stage('Import Ansible Roles') {
+            steps {
+                withCredentials([gitUsernamePassword(credentialsId: 'test-com-svcacct-gtasrepo')]) {
+                    sh label: 'Import Ansible Roles', script: """
+                        export https_proxy=\$prod_https_proxy
+                        export http_proxy=\$prod_https_proxy
+                        ansible-galaxy role install -c ${ansible_verbosity} -r inventories/${params.environment == 'PROD' ? 'gen3-voor-prod/autosys_prod_requirements.yml' : 'gen3-voor-uat/autosys_uat_requirements.yml'}
+                        ansible-galaxy role list ${ansible_verbosity}
+                    """
+                }
+            }
+        }
+
+        stage('Autosys Stage - Stop Shadow Scheduler') {
+            when {
+                anyOf {
+                    expression { return params.type_of_action == 'stop' }
+                    expression { return params.type_of_action == 'restart' }
+                }
+            }
+            steps {
+                script {
+                    sshagent(['boks-gtaansible-ssh']) {
+                        sh label: 'Run Ansible Playbook', script: """
+                            ansible-playbook playbooks/gen3/autosys.yml \
+                                -i inventories/${params.environment == 'PROD' ? 'gen3-voor-prod' : 'gen3-voor-uat'}/inventory/static \
+                                --limit ${params.environment == 'PROD' ? 'prod' : 'uat'}_P01_autosys_shadow \
+                                ${ansible_verbosity} \
+                                --tags ${params.type_of_action} \
+                                --extra-vars "target_hosts=${params.target_hosts}"
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Autosys Stage - Stop Primary Scheduler') {
+            when {
+                anyOf {
+                    expression { return params.type_of_action == 'stop' }
+                    expression { return params.type_of_action == 'restart' }
+                }
+            }
+            steps {
+                script {
+                    sshagent(['boks-gtaansible-ssh']) {
+                        sh label: 'Run Ansible Playbook', script: """
+                            ansible-playbook playbooks/gen3/autosys.yml \
+                                -i inventories/${params.environment == 'PROD' ? 'gen3-voor-prod' : 'gen3-voor-uat'}/inventory/static \
+                                --limit ${params.environment == 'PROD' ? 'prod' : 'uat'}_P01_autosys_primary \
+                                ${ansible_verbosity} \
+                                --tags ${params.type_of_action} \
+                                --extra-vars "target_hosts=${params.target_hosts}"
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Autosys Stage - Start Primary Scheduler') {
+            when {
+                anyOf {
+                    expression { return params.type_of_action == 'start' }
+                    expression { return params.type_of_action == 'restart' }
+                }
+            }
+            steps {
+                script {
+                    sshagent(['boks-gtaansible-ssh']) {
+                        sh label: 'Run Ansible Playbook', script: """
+                            ansible-playbook playbooks/gen3/autosys.yml \
+                                -i inventories/${params.environment == 'PROD' ? 'gen3-voor-prod' : 'gen3-voor-uat'}/inventory/static \
+                                --limit ${params.environment == 'PROD' ? 'prod' : 'uat'}_P01_autosys_primary \
+                                ${ansible_verbosity} \
+                                --tags ${params.type_of_action} \
+                                --extra-vars "target_hosts=${params.target_hosts}"
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Autosys Stage - Start Shadow Scheduler') {
+            when {
+                anyOf {
+                    expression { return params.type_of_action == 'start' }
+                    expression { return params.type_of_action == 'restart' }
+                }
+            }
+            steps {
+                script {
+                    sshagent(['boks-gtaansible-ssh']) {
+                        sh label: 'Run Ansible Playbook', script: """
+                            ansible-playbook playbooks/gen3/autosys.yml \
+                                -i inventories/${params.environment == 'PROD' ? 'gen3-voor-prod' : 'gen3-voor-uat'}/inventory/static \
+                                --limit ${params.environment == 'PROD' ? 'prod' : 'uat'}_P01_autosys_shadow \
+                                ${ansible_verbosity} \
+                                --tags ${params.type_of_action} \
+                                --extra-vars "target_hosts=${params.target_hosts}"
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Autosys Stage - Status Check') {
+            when {
+                expression { return params.type_of_action == 'status' }
+            }
+            steps {
+                script {
+                    sshagent(['boks-gtaansible-ssh']) {
+                        sh label: 'Run Ansible Playbook', script: """
+                            ansible-playbook playbooks/gen3/autosys.yml \
+                                -i inventories/${params.environment == 'PROD' ? 'gen3-voor-prod' : 'gen3-voor-uat'}/inventory/static \
+                                --limit ${params.environment == 'PROD' ? 'prod' : 'uat'}_autosys \
+                                ${ansible_verbosity} \
+                                --tags ${params.type_of_action} \
+                                --extra-vars "target_hosts=${params.target_hosts}"
+                        """
+                    }
+                }
+            }
+        }
+
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: '*.log', allowEmptyArchive: true
+        }
+        success {
+            emailext(
+                to: 'my_user@text.com, my_user2@text.com',
+                subject: "SUCCESS: ${currentBuild.fullDisplayName} - ${params.environment}-AUTOSYS-${params.type_of_action.toUpperCase()}",
+                body: "Autosys ${params.type_of_action} completed successfully on ${params.environment}. Please find the console output attached.",
+                attachLog: true
+            )
+            cleanWs()
+        }
+        failure {
+            emailext(
+                to: 'my_user@text.com, my_user2@text.com',
+                subject: "FAILURE: ${currentBuild.fullDisplayName} - ${params.environment}-AUTOSYS-${params.type_of_action.toUpperCase()}",
+                body: "Autosys ${params.type_of_action} FAILED on ${params.environment}. Please find the console output attached.",
+                attachLog: true
+            )
+            cleanWs()
+        }
+    }
+
+}

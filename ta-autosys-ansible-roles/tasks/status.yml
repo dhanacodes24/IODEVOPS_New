@@ -1,0 +1,22 @@
+---
+# ============================================================
+# Autosys | STATUS task file
+# Checks Autosys scheduler status on the target host.
+# ============================================================
+
+- name: Autosys | Status | Execute 'unisrventr status all' as autosys user
+  ansible.builtin.command:
+    cmd: "{{ autosys_command }} status all"
+  become: true
+  become_user: "{{ autosys_process_user }}"
+  become_method: su
+  register: autosys_status_result
+  changed_when: false
+  tags:
+    - status
+
+- name: Autosys | Status | Display status output
+  ansible.builtin.debug:
+    var: autosys_status_result.stdout_lines
+  tags:
+    - status

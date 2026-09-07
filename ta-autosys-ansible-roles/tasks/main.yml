@@ -1,0 +1,31 @@
+---
+# ============================================================
+# Autosys Role - Main Task Entry Point
+# Tags: start | stop | restart | status
+# Sequence is enforced by inventory group ordering + playbook serial
+# ============================================================
+
+- name: Autosys | Gather service facts
+  ansible.builtin.service_facts:
+  tags:
+    - always
+
+- name: Autosys | Execute STOP tasks
+  ansible.builtin.include_tasks:
+    file: stop.yml
+  tags:
+    - stop
+    - restart
+
+- name: Autosys | Execute START tasks
+  ansible.builtin.include_tasks:
+    file: start.yml
+  tags:
+    - start
+    - restart
+
+- name: Autosys | Execute STATUS tasks
+  ansible.builtin.include_tasks:
+    file: status.yml
+  tags:
+    - status

@@ -1,0 +1,35 @@
+---
+# ============================================================
+# Autosys Gen3 Playbook
+# Location: /IODEVOPS/ansible-common/playbooks/gen3/autosys.yml
+#
+# IMPORTANT - Sequence enforcement:
+#   STOP:    Run shadow group first, then primary  (Jenkins calls twice with --limit)
+#   START:   Run primary group first, then shadow  (Jenkins calls twice with --limit)
+#   RESTART: Handled by Jenkins pipeline stage ordering
+#   STATUS:  Run on both (no sequence constraint)
+#
+# Jenkins passes: --limit prod_P01_autosys_shadow or --limit prod_P01_autosys_primary
+# ============================================================
+
+- name: Autosys Gen3 Playbook
+  hosts: "{{ target_hosts if (target_hosts is defined and target_hosts | length > 0) else 'all' }}"
+  gather_facts: true
+
+  vars_files:
+    - "{{ inventory_dir }}/group_vars/autosys_vars/{{ ansible_limit.split('_')[0] }}_autosys.yml"
+
+  # serial: 1 ensures one host at a time - critical for Primary/Shadow ordering
+  serial: 1
+
+  environment:
+    https_proxy: "{{ https_proxy_hosts | default('') }}"
+    http_proxy: "{{ https_proxy_hosts | default('') }}"
+    no_proxy: "{{ https_proxy_bypass_list | default('') }}"
+
+  tasks:
+    - name: Run Autosys Role
+      ansible.builtin.include_role:
+        name: gtas.autosys
+      tags:
+        - always

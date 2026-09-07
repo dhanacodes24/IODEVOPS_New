@@ -1,0 +1,26 @@
+# ============================================================
+# Autosys PROD Inventory - Static Host Groups
+# Location: /IODEVOPS/ansible-common/inventories/gen3-voor-prod/inventory/static/autosys.yml
+#
+# Group naming: prod_P01_autosys_primary  /  prod_P01_autosys_shadow
+# The Jenkins pipeline passes --limit prod_P01_autosys_primary or prod_P01_autosys_shadow
+# Playbook serial:1 ensures one host processed at a time, respecting sequence.
+# ============================================================
+
+autosys:
+  children:
+    prod_autosys:
+      children:
+        # Primary Scheduler - always acted on FIRST for start, SECOND for stop
+        prod_P01_autosys_primary:
+          hosts:
+            VOAUTOPROD1:
+              ansible_host: 100.92.11
+              autosys_scheduler_role: primary
+
+        # Shadow Scheduler - always acted on FIRST for stop, SECOND for start
+        prod_P01_autosys_shadow:
+          hosts:
+            VOAUTOPROD2:
+              ansible_host: 100.92.12
+              autosys_scheduler_role: shadow

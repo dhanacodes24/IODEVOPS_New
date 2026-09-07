@@ -1,0 +1,7 @@
+---
+# Default values - override in group_vars per environment
+autosys_user: autosys
+autosys_group: autosys
+autosys_uid: 2026
+autosys_gid: 2005
+autosys_command: unisrventr

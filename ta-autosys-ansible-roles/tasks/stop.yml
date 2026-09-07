@@ -1,0 +1,44 @@
+---
+# ============================================================
+# Autosys | STOP task file
+# Stops the Autosys scheduler on the target host.
+# Sequence (Shadow -> Primary) is controlled by playbook serial + inventory groups.
+# ============================================================
+
+- name: Autosys | Stop | Execute 'unisrventr stop all' as autosys user
+  ansible.builtin.command:
+    cmd: "{{ autosys_command }} stop all"
+  become: true
+  become_user: "{{ autosys_process_user }}"
+  become_method: su
+  register: autosys_stop_result
+  changed_when: autosys_stop_result.rc == 0
+  tags:
+    - stop
+    - restart
+
+- name: Autosys | Stop | Display stop command output
+  ansible.builtin.debug:
+    var: autosys_stop_result.stdout_lines
+  tags:
+    - stop
+    - restart
+
+- name: Autosys | Stop | Verify stopped via status check
+  ansible.builtin.command:
+    cmd: "{{ autosys_command }} status all"
+  become: true
+  become_user: "{{ autosys_process_user }}"
+  become_method: su
+  register: autosys_post_stop_status
+  changed_when: false
+  tags:
+    - stop
+    - restart
+
+- name: Autosys | Stop | Print post-stop status output
+  ansible.builtin.debug:
+    var: autosys_post_stop_status.stdout_lines
+  tags:
+    - stop
+    - restart

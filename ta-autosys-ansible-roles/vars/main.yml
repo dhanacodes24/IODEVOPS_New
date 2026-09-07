@@ -1,0 +1,6 @@
+---
+# Role-level vars (non-environment-specific)
+autosys_service_commands:
+  start: "{{ autosys_command }} start all"
+  stop:  "{{ autosys_command }} stop all"
+  status: "{{ autosys_command }} status all"

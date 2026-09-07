@@ -1,0 +1,15 @@
+---
+# ============================================================
+# Autosys UAT group_vars
+# Location: /IODEVOPS/ansible-common/inventories/gen3-voor-uat/inventory/static/group_vars/autosys_vars/uat_autosys.yml
+# ============================================================
+
+autosys_process_user: autosys
+autosys_group_name: autosys
+autosys_process_uid: 2026
+autosys_process_gid: 2005
+
+autosys_command: unisrventr
+
+https_proxy_hosts: "{{ https_proxy | default('') }}"
+https_proxy_bypass_list: "{{ no_proxy | default('') }}"

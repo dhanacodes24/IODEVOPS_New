@@ -1,0 +1,7 @@
+---
+# Ansible Galaxy requirements for Autosys UAT automation
+# Location: /IODEVOPS/ansible-common/inventories/gen3-voor-uat/autosys_uat_requirements.yml
+
+- src: git+https://bitbucket.test.dev.com/projects/IODEVOPS/ta-autosys-ansible-roles.git
+  version: "1.0.0"
+  name: gtas.autosys
