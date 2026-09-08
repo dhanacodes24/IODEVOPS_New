@@ -1,49 +1,78 @@
 
+
+# 🚀 Autosys Scheduler Jenkins Pipeline
+
+
+---
+
+## 📂 Repository Structure
+
+<p align="center">
+  <img src="https://img.shields.io/badge/📁_Repo-Ansible_+_Jenkins-2ECC71?style=for-the-badge&logoColor=white" />
+  <img src="https://img.shields.io/badge/🔐_Role_Based-Autosys-9B59B6?style=for-the-badge&logoColor=white" />
+  <img src="https://img.shields.io/badge/🌍_Multi_Env-UAT_|_PROD-F39C12?style=for-the-badge&logoColor=white" />
+</p>
+
+> 🧭 **Legend:** 🧩 Role definition · ⚙️ Config/vars · 🎬 Task logic · 📜 Playbook · 🌐 Inventory · 🔑 Env vars
+
 ```
-
-
-/IODEVOPS/
-├── ta-autosys-ansible-roles/              ← Ansible Galaxy Role (Bitbucket Repo)
-│   ├── Jenkinsfile                        ← Jenkins Pipeline definition
-│   ├── meta/
-│   │   └── main.yml                       ← Role metadata
-│   ├── defaults/
-│   │   └── main.yml                       ← Default variable values
-│   ├── vars/
-│   │   └── main.yml                       ← Role-level variables
-│   ├── handlers/
-│   │   └── main.yml                       ← Handlers (none needed)
-│   └── tasks/
-│       ├── main.yml                       ← Entry point, delegates via tags
-│       ├── start.yml                      ← Start Autosys tasks
-│       ├── stop.yml                       ← Stop Autosys tasks
-│       └── status.yml                     ← Status check tasks
+🏢 IODEVOPS/
 │
-└── ansible-common/
-    ├── playbooks/
-    │   └── gen3/
-    │       └── autosys.yml                ← Playbook (mirrors webinterface.yml pattern)
-    └── inventories/
-        ├── gen3-voor-prod/
-        │   ├── autosys_prod_requirements.yml   ← Role source (git+https)
-        │   └── inventory/static/
-        │       ├── autosys.yml                 ← Host groups (primary/shadow)
-        │       └── group_vars/
-        │           └── autosys_vars/
-        │               └── prod_autosys.yml    ← Server vars (user, gid, uid, cmd)
-        └── gen3-voor-uat/
-            ├── autosys_uat_requirements.yml    ← Role source (git+https)
-            └── inventory/static/
-                ├── autosys.yml                 ← Host groups (primary/shadow)
-                └── group_vars/
-                    └── autosys_vars/
-                        └── uat_autosys.yml     ← Server vars (user, gid, uid, cmd)
-
-
+├── 🧩 ta-autosys-ansible-roles/              🔖  Ansible Galaxy Role (Bitbucket Repo)
+│   │
+│   │
+│   ├── 📘 meta/
+│   │   └── 🏷️  main.yml                       ℹ️   Role metadata (author, description, etc.)
+│   │
+│   ├── ⚙️  defaults/
+│   │   └── 🎚️  main.yml                       🔧  Default variable values (safe fallbacks)
+│   │
+│   ├── 🧬 vars/
+│   │   └── 📦 main.yml                       🧵  Role-level variables (override defaults)
+│   │
+│   ├── 🔔 handlers/
+│   │   └── 🚫 main.yml                       😴  Handlers (none needed — quiet role!)
+│   │
+│   └── 🎬 tasks/
+│       ├── 🚪 main.yml                       🧭  Entry point — delegates via tags
+│       ├── ▶️  start.yml                      🟢  Start Autosys tasks
+│       ├── ⏹️  stop.yml                       🔴  Stop Autosys tasks
+│       └── 📊 status.yml                     🟡  Status check tasks
+│
+└── 🌐 ansible-common/
+    │
+    ├── 📜 playbooks/
+    │   └── 🗂️  gen3/
+    │       └── 🎯 autosys.yml                🪞  Playbook (mirrors webinterface.yml pattern)
+    │
+    └── 🌍 inventories/
+        │
+        ├── 🏭 gen3-voor-prod/                                🔴  PRODUCTION environment
+        │   ├── 📥 autosys_prod_requirements.yml              🔗  Role source (git+https)
+        │   └── 🖥️  inventory/static/
+        │       ├── 🏘️  autosys.yml                            👥  Host groups (primary/shadow)
+        │       └── 🔑 group_vars/
+        │           └── 🗝️  autosys_vars/
+        │               └── 🔒 prod_autosys.yml                🧾  Server vars (user, gid, uid, cmd)
+        │
+        └── 🧪 gen3-voor-uat/                                 🟡  UAT / staging environment
+            ├── 📥 autosys_uat_requirements.yml                🔗  Role source (git+https)
+            └── 🖥️  inventory/static/
+                ├── 🏘️  autosys.yml                            👥  Host groups (primary/shadow)
+                └── 🔑 group_vars/
+                    └── 🗝️  autosys_vars/
+                        └── 🔓 uat_autosys.yml                  🧾  Server vars (user, gid, uid, cmd)
 ```
 
+| 🧭 Path | 🎯 Purpose |
+|---|---|
+| 🧩 `ta-autosys-ansible-roles/` | The reusable Ansible **role** + the **Jenkinsfile** that drives it |
+| 🎬 `tasks/` | Task logic split by action tag: `start`, `stop`, `status` |
+| 📜 `playbooks/gen3/autosys.yml` | The actual playbook Jenkins invokes |
+| 🏭 `inventories/gen3-voor-prod/` | 🔴 Production hosts, role requirements & server-specific vars |
+| 🧪 `inventories/gen3-voor-uat/` | 🟡 UAT hosts, role requirements & server-specific vars |
 
-----------------------------------------
+---
 
 # 🚀 Autosys Scheduler Jenkins Pipeline
 
